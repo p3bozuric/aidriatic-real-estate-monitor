@@ -1,6 +1,9 @@
 crawl_export/
 rss_export/
+real_estate_export/
 .vscode/
 __pycache__/
 .env
 .venv/
+data/
+logs/

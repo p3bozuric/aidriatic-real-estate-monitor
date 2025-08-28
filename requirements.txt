@@ -1,3 +1,8 @@
 feedparser
 crawl4ai
 playwright
+psycopg2-binary
+psycopg2
+dotenv
+loguru
+pandas

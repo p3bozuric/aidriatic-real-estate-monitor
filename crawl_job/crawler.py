@@ -5,6 +5,8 @@ import os
 from datetime import datetime
 from typing import Dict, Optional, Any
 from crawl4ai import *
+from loguru import logger
+from database.control import DatabaseControl
 
 def clean_and_extract_real_estate_info(markdown_content: str, id: str) -> Dict[str, Any]:
     """
@@ -56,7 +58,10 @@ def clean_and_extract_real_estate_info(markdown_content: str, id: str) -> Dict[s
 
         content = content.split(f"[Ruski](http://www.realestatecroatia.com/rus/detail.asp?id={id})\n")[1]
 
-        croatian_desc = content.split("\nInterni broj: **")[0]
+        if "Interni broj: **" in content:
+            croatian_desc = content.split("\nInterni broj: **")[0]
+        else:
+            croatian_desc = content.split("\nREC ID: **")[0]
         english_desc = content.split(f"REC ID: **{id}**\n")[1].split("\nIntrnal number:")[0]
         german_desc = content.split(f"REC ID: **{id}**\n")[2].split("\nInterne Nummer:")[0]
 
@@ -64,99 +69,96 @@ def clean_and_extract_real_estate_info(markdown_content: str, id: str) -> Dict[s
         
     # Initialize result dictionary
     result = {
-        "Vrsta nekretnine": "",
-        "Vrsta prometa": "",
-        "Županija": "",
-        "Općina": "",
-        "Mjesto": "",
+        "Property type": "",
+        "Transaction type": "",
+        "County": "",
+        "Municipality": "",
+        "Place": "",
         "ID": id,
-        "Cijena": None,
+        "Price": None,
         "Currency": None,
-        "Površina": None,
-        "Broj soba": None,
-        "Broj parkirnih mjesta": None,
-        "Pogled": "",
-        "Okućnica": "",
-        "Broj kupaona": None,
-        "Garaža": None,
-        "Blizina transporta": "",
-        "Blizina plaže": "",
-        "Kat": None,
-        "Lift": "",
+        "Area": None,
+        "Number of rooms": None,
+        "Number of parking spaces": None,
+        "View": "",
+        "Garden": "",
+        "Number of bathrooms": None,
+        "Garage": None,
+        "Near transport": "",
+        "Near beach": "",
+        "Floor": None,
+        "Elevator": "",
         "Croatian description": "",
         "English description": "",
         "German description": ""
     }
-    
+
     # Extract and parse title
     first_line = markdown_content.splitlines()[0]
     if first_line:
         # Split title by " - " to get components
         title_parts = [part.strip() for part in first_line.split(' - ')]
-        
+
         if len(title_parts) >= 3:
             # First part is property type
-            result["Vrsta nekretnine"] = title_parts[0]
+            result["Property type"] = title_parts[0]
             # Second part is transaction type
-            result["Vrsta prometa"] = title_parts[1]
-            # Remaining parts form the location (ŽUPANIJA - OPĆINA - MJESTO)
+            result["Transaction type"] = title_parts[1]
+            # Remaining parts form the location (County - Municipality - Place)
             location_parts = title_parts[2:]
-            
+
             if len(location_parts) >= 3:
-                result["Županija"] = location_parts[0]
-                result["Općina"] = location_parts[1]
-                result["Mjesto"] = location_parts[2]
+                result["County"] = location_parts[0]
+                result["Municipality"] = location_parts[1]
+                result["Place"] = location_parts[2]
             elif len(location_parts) == 2:
                 # Handle case with only 2 location parts
-                result["Županija"] = location_parts[0]
-                result["Općina"] = location_parts[1]
-                result["Mjesto"] = location_parts[1]  # Use same as općina
+                result["County"] = location_parts[0]
+                result["Municipality"] = location_parts[1]
+                result["Place"] = location_parts[1]  # Use same as municipality
             elif len(location_parts) == 1:
                 # Handle case with only 1 location part
-                result["Mjesto"] = location_parts[0]
-    
-    
+                result["Place"] = location_parts[0]
+
     # Extract price and currency
     price_match = re.search(r'###\s*([\d,]+\.?\d*)\s*€', markdown_content)
     if price_match:
         price_text = price_match.group(0)
         price, currency = extract_price_and_currency(price_text)
-        result["Cijena"] = price
+        result["Price"] = price
         result["Currency"] = currency
-    
+
     # Extract property details from the table
     property_details = {
-        r'Površina:\s*\|\s*\*\*(\d+)\s*m2?\*\*': "Površina",
-        r'Broj soba:\s*\|\s*\*\*(\d+)\*\*': "Broj soba",
-        r'Broj parkirnih mjesta:\s*\|\s*\*\*(\d+)\*\*': "Broj parkirnih mjesta",
-        r'Pogled:\s*\|\s*\*\*([^*\n]+)\*\*': "Pogled",
-        r'Okućnica:\s*\|\s*\*\*([^*\n]+)\*\*': "Okućnica",
-        r'Broj kupaona:\s*\|\s*\*\*(\d+)\*\*': "Broj kupaona",
-        r'Garaža:\s*\|\s*\*\*(\d+)\*\*': "Garaža",
-        r'Blizina transporta:\s*\|\s*\*\*([^*\n]+)\*\*': "Blizina transporta",
-        r'Blizina plaže:\s*\|\s*\*\*([^*\n]+)\*\*': "Blizina plaže",
-        r'Kat:\s*\|\s*\*\*(\d+)\*\*': "Kat",
-        r'Lift:\s*\|\s*\*\*([^*\n]+)\*\*': "Lift"
+        r'Površina:\s*\|\s*\*\*(\d+)\s*m2?\*\*': "Area",
+        r'Broj soba:\s*\|\s*\*\*(\d+)\*\*': "Number of rooms",
+        r'Broj parkirnih mjesta:\s*\|\s*\*\*(\d+)\*\*': "Number of parking spaces",
+        r'Pogled:\s*\|\s*\*\*([^*\n]+)\*\*': "View",
+        r'Okućnica:\s*\|\s*\*\*([^*\n]+)\*\*': "Garden",
+        r'Broj kupaona:\s*\|\s*\*\*(\d+)\*\*': "Number of bathrooms",
+        r'Garaža:\s*\|\s*\*\*(\d+)\*\*': "Garage",
+        r'Blizina transporta:\s*\|\s*\*\*([^*\n]+)\*\*': "Near transport",
+        r'Blizina plaže:\s*\|\s*\*\*([^*\n]+)\*\*': "Near beach",
+        r'Kat:\s*\|\s*\*\*(\d+)\*\*': "Floor",
+        r'Lift:\s*\|\s*\*\*([^*\n]+)\*\*': "Elevator"
     }
-    
+
     for pattern, key in property_details.items():
         match = re.search(pattern, markdown_content)
         if match:
             value = match.group(1).strip()
-            if key in ["Površina", "Broj soba", "Broj parkirnih mjesta", "Broj kupaona", "Garaža", "Kat"]:
+            if key in ["Area", "Number of rooms", "Number of parking spaces", "Number of bathrooms", "Garage", "Floor"]:
                 result[key] = extract_number(value)
             else:
                 result[key] = clean_text(value)
-    
-    # Extract Croatian description
+
+    # Extract Croatian, English, and German descriptions
     croatian_desc, english_desc, german_desc = find_description(markdown_content, id=id)
-    
+
     result["Croatian description"] = clean_text(croatian_desc)
-
     result["German description"] = clean_text(german_desc)
-
     result["English description"] = clean_text(english_desc)
-    
+
     return result
 
 def save_to_json(data: Dict[str, Any], filename: str = "real_estate_data.json") -> None:
@@ -249,25 +251,35 @@ def process_real_estate_listing(url: str, id: str, output_folder: str = "real_es
     Returns:
         Dict[str, Any]: Extracted real estate information
     """
-    # Create output folder
-    os.makedirs(output_folder, exist_ok=True)
-    
-    # Step 1: Crawl the website
-    print(f"Crawling {url}...")
+    # Crawl the URL
+    logger.info(f"Crawling ID: {id}")
     markdown = asyncio.run(run_crawl_job(url))
 
-    # Step 2: Clean the file
-    print("Cleaning markdown...")
+    # Clean markdown content
     cleaned_content = clean_file(markdown)
     
-    # Step 3: Save raw markdown
-    markdown_filepath = save_crawl_job_markdown(cleaned_content, id, output_folder)
-    
-    # Step 4: Extract real estate information
-    print("Extracting real estate information...")
+    # Extract real estate information
+    logger.info(f"Extracting property {id} information...")
     extracted_data = clean_and_extract_real_estate_info(cleaned_content, id)
     
-    json_filename = f"real_estate_data_{extracted_data["ID"]}.json"
+    db = DatabaseControl()
+
+    try:
+        logger.info(f"Inserting property ID {id} into database...")
+
+        success = db.insert_property(extracted_data)
+
+        if success:
+            logger.info(f"Inserted property ID {id} into database.")
+        else:
+            logger.info(f"Failed to insert property ID {id} into database.")
+            
+    except Exception as e:
+
+        logger.info(f"Error inserting property ID {id} into database: {e}")
+
+
+    json_filename = f"real_estate_data_{id}.json"
     json_filepath = os.path.join(output_folder, json_filename)
     
     with open(json_filepath, 'w', encoding='utf-8') as f:
