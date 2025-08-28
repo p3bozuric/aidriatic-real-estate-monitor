@@ -1,0 +1,6 @@
+crawl_export/
+rss_export/
+.vscode/
+__pycache__/
+.env
+.venv/

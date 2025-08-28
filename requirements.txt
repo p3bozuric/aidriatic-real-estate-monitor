@@ -1,0 +1,3 @@
+feedparser
+crawl4ai
+playwright
