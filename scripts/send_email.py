@@ -1,19 +1,5 @@
-from rss_parser.rss_parsing import parse_rss_feed, save_entries_to_file
-from crawl_job.crawler import process_real_estate_listing
-from crawl_job.job import JobRunner
-import asyncio
-from database.setup import setup_database
-
 from loguru import logger
-
-from litellm import completion
-import os
-
-from dotenv import load_dotenv
-
-
 from database.control import DatabaseControl
-import pandas as pd
 from filtering.filter import hard_filter, soft_filter, presentation
 from emailing.email import send_email
 
@@ -63,9 +49,3 @@ for row in users_df.iterrows():
     send_email(email, 
                subject="Daily Property Insights",
                body=email_content)
-
-
-
-    
-    
-

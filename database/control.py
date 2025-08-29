@@ -44,7 +44,7 @@ class DatabaseControl:
             
             # Map dictionary keys to database columns
             columns = [
-                'property_type', 'transaction_type', 'county', 'municipality', 
+                'id_int', 'property_type', 'transaction_type', 'county', 'municipality', 
                 'place', 'id', 'price', 'currency', 'area', 'number_of_rooms',
                 'number_of_parking_spaces', 'view', 'garden', 'number_of_bathrooms',
                 'garage', 'near_transport', 'near_beach', 'floor', 'elevator',
@@ -79,6 +79,11 @@ class DatabaseControl:
             
             # Prepare values
             values = []
+
+            id_int = int(property_data['ID'])
+            
+            property_data['id_int'] = id_int
+
             for col in columns:
                 original_key = next((k for k, v in key_mapping.items() if v == col), col)
                 value = property_data.get(original_key, '')
@@ -305,16 +310,16 @@ class DatabaseControl:
             logger.info(f"Error getting users dataframe: {e}")
             return pd.DataFrame()
     
-    def filter_properties(self, transaction_type: str = None, property_type: str = None, 
-                         county: str = None, min_price: int = None, max_price: int = None,
+    def filter_properties(self, transaction_type: str = None, property_types: str = None, 
+                         counties: str = None, min_price: int = None, max_price: int = None,
                          min_area: int = None, max_area: int = None) -> List[int]:
         """
         Filter properties based on criteria and return list of ID_int values.
         
         Args:
             transaction_type: Transaction type filter
-            property_type: Property type filter
-            county: County filter
+            property_types: Property type filter
+            counties: Counties filter
             min_price: Minimum price filter
             max_price: Maximum price filter
             min_area: Minimum area filter (m2)
@@ -335,13 +340,15 @@ class DatabaseControl:
                 where_clauses.append("transaction_type = %s")
                 values.append(transaction_type)
             
-            if property_type:
-                where_clauses.append("property_type = %s")
-                values.append(property_type)
+            if property_types:
+                property_types_placeholders = ', '.join(['%s'] * len(property_types))
+                where_clauses.append(f"property_type in ({property_types_placeholders})")
+                values.extend(property_types)
             
-            if county:
-                where_clauses.append("county = %s")
-                values.append(county)
+            if counties:
+                placeholders = ', '.join(['%s'] * len(counties))
+                where_clauses.append(f"county IN ({placeholders})")
+                values.extend(counties)
             
             if min_price is not None:
                 where_clauses.append("price >= %s")
@@ -412,7 +419,7 @@ class DatabaseControl:
             return {}
     
     def get_properties_by_ids(self, id_values: List[Union[str, int]]) -> Dict[str, Dict[str, Any]]:
-        """
+        """ 
         Extract all values from properties table for a list of IDs or ID_ints.
         
         Args:

@@ -6,26 +6,24 @@ This project monitors Croatian real estate listings via RSS, crawls new listings
 
 ---
 
-## TODO
+## Status & TODO
 
-1. **Scheduled RSS Checks**
-    - Perform an RSS check at 00:00 on the first day of each month, and another at midnight daily.
-    - For each check, collect all listing IDs published in that window that are not already in the database.
+- **Database:** Implemented and operational.
+- **Filters:** Basic logic for hard and soft filters is in place.
+- **Scraping:** Logic for tracking scraping and scrape jobs is built.
+- **Emails:** Logic for sending email has been setup
+- **Scheduling:** Scheduling set up with cron scheduler for linux (project is meant to be run on linux)
+- **Email Notifications:** Set up.
+- **Deployment:** Ready for deployment on aidriatic.com by using docker and EC2.
 
-2. **User Management**
-    - Implement user registration and management.
-    - Allow users to specify their property preferences ("wishes").
+### Next Steps
 
-3. **Database Integration**
-    - Store property data in a database (convert JSON to DB records).
-    - Use Supabase, Airflow, or another suitable solution for storage and orchestration.
+1. **Filter**
+    - Set up limits on which properties are going to get extracted for filtering (prefilter based on min and max ID)
 
-4. **Filtering**
-    - Implement HARD filters (strict requirements).
-    - Implement SOFT filters (preferences, nice-to-have).
-
-5. **Email Notifications**
-    - Set up email sending to notify users about new listings that match their filters.
+2. **User Newsletter setup**
+    - API endpoints to create a newsletter request, delete it or edit it.
+    - This would require a login perhaps?
 
 ---
 
