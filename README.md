@@ -18,31 +18,29 @@ This project monitors Croatian real estate listings via RSS, crawls new listings
 
 ### Next Steps
 
-1. **Filter**
-    - Set up limits on which properties are going to get extracted for filtering (prefilter based on min and max ID)
-
-2. **User Newsletter setup**
+1. **User Newsletter API setup**
     - API endpoints to create a newsletter request, delete it or edit it.
     - This would require a login perhaps?
+
+2. **Front end setup and user stories**
+    - Login or registration on opening the web-site. Gmail enabled
+    - My account dashboard - edit account, if active subscriber show metrics (in last x days we found x real-estates suitable for you - click and open the list of those real-estates),..
+    - Active subscriber or inactive (add new boolean to subscriber information)
+    - Previous newsletter interface with dates of sending,... (integrate new database table for saving of generated emails for users)
+    - Simple "unsubscribe" button for newsletters
+    - Basic "contact us" form
+    - Show a loading spinner during data fetch
+    - Display a "no results found" message if no listings match
+    - Add a "refresh listings" button
+    - Show last update time on dashboard
 
 ---
 
 ## Getting Started
 
-1. **Install dependencies:**
-    ```sh
-    uv pip install -r requirements.txt
-    playwright install
-    ```
-
-2. **Run the main script:**
-    ```sh
-    python main.py
-    ```
-
+Prepare with setup.bat for windows or setup.sh for linux.
 ---
 
 ## Notes
 
-- Make sure to configure your database and email credentials before running in production.
-- See `main.py` for the current entry point and workflow.
+- Make sure to configure your .env credentials before running in production.
