@@ -6,4 +6,4 @@ docker-compose up -d
 
 mkdir job_data
 
-uv run scripts/initial_setup.py
+uv run initial_setup

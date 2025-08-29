@@ -17,6 +17,7 @@ def hard_filter(criteria):
             - 'max_price' (float or int): Maximum price.
             - 'min_area' (float or int): Minimum area in square meters.
             - 'max_area' (float or int): Maximum area in square meters.
+            - 'min_id' (int): Minimum ID to filter new listings.
     Returns:
         list: A list of property dictionaries that match the given criteria.
     """
@@ -28,7 +29,8 @@ def hard_filter(criteria):
                                               min_price=criteria['min_price'], 
                                               max_price=criteria['max_price'], 
                                               min_area=criteria['min_area'], 
-                                              max_area=criteria['max_area'])
+                                              max_area=criteria['max_area'],
+                                              min_id=criteria['min_id'])
     
     properties_dict = db.get_properties_by_ids(realestate_id_list)
 

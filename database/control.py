@@ -312,7 +312,7 @@ class DatabaseControl:
     
     def filter_properties(self, transaction_type: str = None, property_types: str = None, 
                          counties: str = None, min_price: int = None, max_price: int = None,
-                         min_area: int = None, max_area: int = None) -> List[int]:
+                         min_area: int = None, max_area: int = None, min_id: int = None) -> List[int]:
         """
         Filter properties based on criteria and return list of ID_int values.
         
@@ -365,6 +365,10 @@ class DatabaseControl:
             if max_area is not None:
                 where_clauses.append("area <= %s")
                 values.append(max_area)
+
+            if min_id is not None:
+                where_clauses.append("id_int >= %s")
+                values.append(min_id)
             
             # Build and execute query
             base_query = "SELECT id_int FROM properties"

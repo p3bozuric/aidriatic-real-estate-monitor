@@ -31,7 +31,7 @@ echo "Creating job_data directory..."
 mkdir -p job_data
 
 echo "Running initial setup..."
-uv run scripts/initial_setup.py
+uv run initial_setup
 
 echo "Setting up cron jobs..."
 
@@ -50,9 +50,9 @@ cat >> "$TEMP_CRON" << EOF
 
 # Adriatic Real Estate Monitor Jobs
 # Daily script at midnight (00:00)
-0 0 * * * cd $PROJECT_DIR && $UV_PATH run scripts/daily_script.py >> $PROJECT_DIR/logs/daily.log 2>&1
+0 0 * * * cd $PROJECT_DIR && $UV_PATH run daily_script >> $PROJECT_DIR/logs/daily.log 2>&1
 # Email script at 9 AM (09:00)  
-0 9 * * * cd $PROJECT_DIR && $UV_PATH run scripts/send_email.py >> $PROJECT_DIR/logs/email.log 2>&1
+0 9 * * * cd $PROJECT_DIR && $UV_PATH run send_email >> $PROJECT_DIR/logs/email.log 2>&1
 EOF
 
 # Install the new crontab
