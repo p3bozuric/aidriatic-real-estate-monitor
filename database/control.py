@@ -119,8 +119,7 @@ class DatabaseControl:
         Insert a new user into the users table.
         
         Args:
-            user_data: Dictionary containing user information (email, first_name, last_name, transaction_type, 
-                        property_types (list), min_price, max_price, min_m2, max_m2, location_counties (list), cities (list), description)
+            user_data: Dictionary containing user information (email, username, first_name, last_name, password_hash)
             
         Returns:
             bool: True if successful, False otherwise
@@ -129,31 +128,17 @@ class DatabaseControl:
             conn = self._get_connection()
             cur = conn.cursor()
             
-            # Convert lists to comma-separated strings
-            property_types = ','.join(user_data.get('property_types', []))
-            location_counties = ','.join(user_data.get('location_counties', []))
-            cities = ','.join(user_data.get('cities', []))
-            
             query = """
-            INSERT INTO users (email, first_name, last_name, transaction_type, 
-                             property_types, min_price, max_price, min_m2, max_m2,
-                             location_counties, cities, description)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO users (email, username, first_name, last_name, password_hash)
+            VALUES (%s, %s, %s, %s, %s)
             """
             
             values = (
                 user_data.get('email', ''),
+                user_data.get('username', ''),
                 user_data.get('first_name', ''),
                 user_data.get('last_name', ''),
-                user_data.get('transaction_type', ''),
-                property_types,
-                user_data.get('min_price', 0),
-                user_data.get('max_price', 0),
-                user_data.get('min_m2', 0),
-                user_data.get('max_m2', 0),
-                location_counties,
-                cities,
-                user_data.get('description', '')
+                user_data.get('password_hash', '')
             )
             
             cur.execute(query, values)
@@ -167,6 +152,150 @@ class DatabaseControl:
             logger.info(f"Error inserting user: {e}")
             return False
     
+    def insert_user_goal(self, user_goal_data: Dict[str, Any]) -> bool:
+        """
+        Insert a new user into the user_goals table.
+        
+        Args:
+            user_data: Dictionary containing user information user_id, transaction_type, property_types (list), min_price, max_price, min_m2, max_m2, location_counties (list), cities (list), description)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            
+            # Convert lists to comma-separated strings
+            property_types = ','.join(user_goal_data.get('property_types', []))
+            location_counties = ','.join(user_goal_data.get('location_counties', []))
+            cities = ','.join(user_goal_data.get('cities', []))
+            
+            query = """
+            INSERT INTO user_goals (user_id, transaction_type, 
+                             property_types, min_price, max_price, min_m2, max_m2,
+                             location_counties, cities, description)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            
+            values = (
+                user_goal_data.get('user_id', ''),
+                user_goal_data.get('transaction_type', ''),
+                property_types,
+                user_goal_data.get('min_price', 0),
+                user_goal_data.get('max_price', 0),
+                user_goal_data.get('min_m2', 0),
+                user_goal_data.get('max_m2', 0),
+                location_counties,
+                cities,
+                user_goal_data.get('description', '')
+            )
+            
+            cur.execute(query, values)
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return True
+            
+        except Exception as e:
+            logger.info(f"Error inserting user: {e}")
+            return False
+        
+    def remove_user_goal(self, user_goal_id: int) -> bool:
+        """
+        Remove a user goal based on user_goal_id.
+        
+        Args:
+            user_goal_id: User goal's ID
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            
+            cur.execute("DELETE FROM user_goals WHERE id = %s", (user_goal_id,))
+            rows_affected = cur.rowcount
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return rows_affected > 0
+            
+        except Exception as e:
+            logger.info(f"Error removing user goal: {e}")
+            return False
+        
+    def update_user_goal(self, user_goal_id: int, user_goal_data: Dict[str, Any]) -> bool:
+        """
+        Update an existing user goal based on user_goal_id.
+        
+        Args:
+            user_goal_id: User goal's ID
+            user_goal_data: Dictionary containing updated user goal information
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            
+            # Build update query dynamically
+            set_clauses = []
+            values = []
+            
+            field_mapping = {
+                'user_id': 'user_id',
+                'transaction_type': 'transaction_type',
+                'min_price': 'min_price',
+                'max_price': 'max_price',
+                'min_m2': 'min_m2',
+                'max_m2': 'max_m2',
+                'description': 'description'
+            }
+            
+            for key, db_field in field_mapping.items():
+                if key in user_goal_data:
+                    set_clauses.append(f"{db_field} = %s")
+                    values.append(user_goal_data[key])
+            
+            # Handle list fields
+            if 'property_types' in user_goal_data:
+                set_clauses.append("property_types = %s")
+                values.append(','.join(user_goal_data['property_types']))
+            
+            if 'location_counties' in user_goal_data:
+                set_clauses.append("location_counties = %s")
+                values.append(','.join(user_goal_data['location_counties']))
+            
+            if 'cities' in user_goal_data:
+                set_clauses.append("cities = %s")
+                values.append(','.join(user_goal_data['cities']))
+            
+            if not set_clauses:
+                return False
+            
+            # WHERE
+            values.append(user_goal_id) 
+            
+            query = f"UPDATE user_goals SET {', '.join(set_clauses)} WHERE id = %s"
+            cur.execute(query, values)
+            
+            rows_affected = cur.rowcount
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return rows_affected > 0
+            
+        except Exception as e:
+            logger.info(f"Error updating user goal: {e}")
+            return False
+        
     def get_highest_id_int(self) -> int:
         """
         Get the highest ID_int value from the properties table.
@@ -190,12 +319,12 @@ class DatabaseControl:
             logger.info(f"Error getting highest ID: {e}")
             return 0
     
-    def remove_user(self, email: str) -> bool:
+    def remove_user(self, username: str) -> bool:
         """
-        Remove a user based on email.
+        Remove a user based on username.
         
         Args:
-            email: User's email address
+            username: User's username
             
         Returns:
             bool: True if successful, False otherwise
@@ -204,7 +333,7 @@ class DatabaseControl:
             conn = self._get_connection()
             cur = conn.cursor()
             
-            cur.execute("DELETE FROM users WHERE email = %s", (email,))
+            cur.execute("DELETE FROM users WHERE username = %s", (username,))
             rows_affected = cur.rowcount
             
             conn.commit()
@@ -217,12 +346,12 @@ class DatabaseControl:
             logger.info(f"Error removing user: {e}")
             return False
     
-    def update_user(self, email: str, user_data: Dict[str, Any]) -> bool:
+    def update_user(self, username: str, user_data: Dict[str, Any]) -> bool:
         """
-        Update an existing user based on email.
+        Update an existing user based on username.
         
         Args:
-            email: User's email address
+            username: User's username
             user_data: Dictionary containing updated user information
             
         Returns:
@@ -239,12 +368,7 @@ class DatabaseControl:
             field_mapping = {
                 'first_name': 'first_name',
                 'last_name': 'last_name',
-                'transaction_type': 'transaction_type',
-                'min_price': 'min_price',
-                'max_price': 'max_price',
-                'min_m2': 'min_m2',
-                'max_m2': 'max_m2',
-                'description': 'description'
+                'password_hash': 'password_hash'
             }
             
             for key, db_field in field_mapping.items():
@@ -252,25 +376,12 @@ class DatabaseControl:
                     set_clauses.append(f"{db_field} = %s")
                     values.append(user_data[key])
             
-            # Handle list fields
-            if 'property_types' in user_data:
-                set_clauses.append("property_types = %s")
-                values.append(','.join(user_data['property_types']))
-            
-            if 'location_counties' in user_data:
-                set_clauses.append("location_counties = %s")
-                values.append(','.join(user_data['location_counties']))
-            
-            if 'cities' in user_data:
-                set_clauses.append("cities = %s")
-                values.append(','.join(user_data['cities']))
-            
             if not set_clauses:
                 return False
             
-            values.append(email)  # For WHERE clause
+            values.append(username)
             
-            query = f"UPDATE users SET {', '.join(set_clauses)} WHERE email = %s"
+            query = f"UPDATE users SET {', '.join(set_clauses)} WHERE username = %s"
             cur.execute(query, values)
             
             rows_affected = cur.rowcount
@@ -284,9 +395,35 @@ class DatabaseControl:
             logger.info(f"Error updating user: {e}")
             return False
     
-    def get_users_dataframe(self) -> pd.DataFrame:
+    def verify_user_email(self, username: str) -> bool:
         """
-        Extract all user preferences to a pandas DataFrame.
+        Mark a user's email as verified based on username.
+        
+        Args:
+            username: User's username
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            
+            cur.execute("UPDATE users SET email_verified = TRUE WHERE username = %s", (username,))
+            rows_affected = cur.rowcount
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return rows_affected > 0
+            
+        except Exception as e:
+            logger.info(f"Error verifying user email: {e}")
+            return False
+        
+    def get_user_goals_dataframe(self, user_id) -> pd.DataFrame:
+        """
+        Extract all user user goals to a pandas DataFrame.
         
         Returns:
             pd.DataFrame: DataFrame containing all user data
@@ -294,8 +431,8 @@ class DatabaseControl:
         try:
             conn = self._get_connection()
             
-            query = "SELECT * FROM users"
-            df = pd.read_sql_query(query, conn)
+            query = "SELECT * FROM user_goals WHERE user_id = %s"
+            df = pd.read_sql_query(query, conn, params=(user_id,))
             
             # Convert comma-separated strings back to lists for list columns
             list_columns = ['property_types', 'location_counties', 'cities']

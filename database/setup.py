@@ -55,9 +55,27 @@ def setup_database():
         # Create users table
         create_users_table = """
         CREATE TABLE IF NOT EXISTS users (
-            email VARCHAR(255) PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            username VARCHAR(255) UNIQUE NOT NULL,
             first_name VARCHAR(255) NOT NULL,
             last_name VARCHAR(255) NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            email_verified BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Add indexes for faster lookups
+        CREATE INDEX idx_users_email ON users(email);
+        CREATE INDEX idx_users_username ON users(username);
+        """
+
+        create_user_goals_table = """
+        CREATE TABLE IF NOT EXISTS user_goals (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
             transaction_type VARCHAR(255) NOT NULL,
             property_types TEXT DEFAULT '',
             min_price INTEGER DEFAULT 0,
@@ -66,15 +84,23 @@ def setup_database():
             max_m2 INTEGER DEFAULT 0,
             location_counties TEXT DEFAULT '',
             cities TEXT DEFAULT '',
-            description TEXT DEFAULT ''
+            description TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+
+        CREATE INDEX IF NOT EXISTS idx_user_goals_user_id ON user_goals(user_id);
         """
-        
+
         cur.execute(create_properties_table)
         logger.info("Properties table exists or has been created.")
 
         cur.execute(create_users_table)
         logger.info("Users table exists or has been created.")
+
+        cur.execute(create_user_goals_table)
+        logger.info("User goals table exists or has been created.")
         
         conn.commit()
         cur.close()
@@ -124,6 +150,7 @@ if __name__ == "__main__":
     # Test inserting a user
     sample_user = {
         "email": "john.doe@example.com",
+        "username": "johndoe",
         "first_name": "John",
         "last_name": "Doe",
         "transaction_type": "buy",
