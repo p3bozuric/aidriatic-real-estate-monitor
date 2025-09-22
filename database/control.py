@@ -5,7 +5,53 @@ import os
 from dotenv import load_dotenv
 from typing import List, Dict, Any, Union
 from loguru import logger
+import bcrypt
 
+class PasswordService:
+    """
+    Password service class for hashing and verifying passwords.
+    """
+
+    @staticmethod
+    def hash_password(plain_password: str) -> str:
+        """
+        Hash a plain text password using bcrypt
+        
+        Args:
+            plain_password: The plain text password
+            
+        Returns:
+            str: The hashed password (includes salt)
+        """
+
+        # Generate salt
+        salt = bcrypt.gensalt(rounds=12)
+
+        # Hash password with salt
+        hashed = bcrypt.hashpw(plain_password.encode('utf-8'), salt)
+
+        return hashed.decode('utf-8')
+    
+    @staticmethod
+    def verify_password(plain_password: str, hashed_password: str) -> bool:
+        """
+        Verify a plain password against a hashed password
+        
+        Args:
+            plain_password: The plain text password to verify
+            hashed_password: The stored hashed password
+            
+        Returns:
+            bool: True if passwords match, False otherwise
+        """
+        try:
+            return bcrypt.checkpw(
+                plain_password.encode('utf-8'), 
+                hashed_password.encode('utf-8')
+            )
+        except Exception:
+            return False
+        
 class DatabaseControl:
     """
     Database control class for managing properties and users tables.
@@ -15,6 +61,8 @@ class DatabaseControl:
         """Initialize database connection parameters."""
 
         load_dotenv()
+
+        self.password_service = PasswordService()
 
         self.connection_params = {
             'host': os.getenv('POSTGRES_HOST', 'localhost'),
@@ -119,7 +167,7 @@ class DatabaseControl:
         Insert a new user into the users table.
         
         Args:
-            user_data: Dictionary containing user information (email, username, first_name, last_name, password_hash)
+            user_data: Dictionary containing user information (email, username, first_name, last_name, password)
             
         Returns:
             bool: True if successful, False otherwise
@@ -127,6 +175,10 @@ class DatabaseControl:
         try:
             conn = self._get_connection()
             cur = conn.cursor()
+
+            password_hash = self.password_service.hash_password(user_data.get('password', ''))
+
+            user_data['password_hash'] = password_hash
             
             query = """
             INSERT INTO users (email, username, first_name, last_name, password_hash)
@@ -150,6 +202,99 @@ class DatabaseControl:
             
         except Exception as e:
             logger.info(f"Error inserting user: {e}")
+            return False
+  
+    def remove_user(self, username: str) -> bool:
+        """
+        Remove a user based on username.
+        
+        Args:
+            username: User's username
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            conn = self._get_connection()
+            cur = conn.cursor()
+            
+            cur.execute("DELETE FROM users WHERE username = %s", (username,))
+            rows_affected = cur.rowcount
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return rows_affected > 0
+            
+        except Exception as e:
+            logger.info(f"Error removing user: {e}")
+            return False
+    
+    def update_user(self, username: str, user_data: Dict[str, Any]) -> bool:
+        """
+        Update an existing user based on username.
+        
+        Args:
+            username: User's username
+            user_data: Dictionary containing updated user information (first_name, last_name, old_password, new_password)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            conn = self._get_connection()
+            cur = conn.cursor()
+
+            if 'old_password' in user_data and 'new_password' in user_data:
+                # Verify old password
+                cur.execute("SELECT password_hash FROM users WHERE username = %s", (username,))
+                result = cur.fetchone()
+                
+                if not result:
+                    return False
+                
+                stored_hash = result[0]
+                
+                if not self.password_service.verify_password(user_data['old_password'], stored_hash):
+                    return False
+                
+                # Hash new password
+                new_hashed = self.password_service.hash_password(user_data['new_password'])
+                user_data['password_hash'] = new_hashed
+            
+            # Build update query dynamically
+            set_clauses = []
+            values = []
+            
+            field_mapping = {
+                'first_name': 'first_name',
+                'last_name': 'last_name',
+                'password_hash': 'password_hash'
+            }
+            
+            for key, db_field in field_mapping.items():
+                if key in user_data:
+                    set_clauses.append(f"{db_field} = %s")
+                    values.append(user_data[key])
+            
+            if not set_clauses:
+                return False
+            
+            values.append(username)
+            
+            query = f"UPDATE users SET {', '.join(set_clauses)} WHERE username = %s"
+            cur.execute(query, values)
+            
+            rows_affected = cur.rowcount
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return rows_affected > 0
+            
+        except Exception as e:
+            logger.info(f"Error updating user: {e}")
             return False
     
     def insert_user_goal(self, user_goal_data: Dict[str, Any]) -> bool:
@@ -318,83 +463,7 @@ class DatabaseControl:
         except Exception as e:
             logger.info(f"Error getting highest ID: {e}")
             return 0
-    
-    def remove_user(self, username: str) -> bool:
-        """
-        Remove a user based on username.
-        
-        Args:
-            username: User's username
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            conn = self._get_connection()
-            cur = conn.cursor()
-            
-            cur.execute("DELETE FROM users WHERE username = %s", (username,))
-            rows_affected = cur.rowcount
-            
-            conn.commit()
-            cur.close()
-            conn.close()
-            
-            return rows_affected > 0
-            
-        except Exception as e:
-            logger.info(f"Error removing user: {e}")
-            return False
-    
-    def update_user(self, username: str, user_data: Dict[str, Any]) -> bool:
-        """
-        Update an existing user based on username.
-        
-        Args:
-            username: User's username
-            user_data: Dictionary containing updated user information
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            conn = self._get_connection()
-            cur = conn.cursor()
-            
-            # Build update query dynamically
-            set_clauses = []
-            values = []
-            
-            field_mapping = {
-                'first_name': 'first_name',
-                'last_name': 'last_name',
-                'password_hash': 'password_hash'
-            }
-            
-            for key, db_field in field_mapping.items():
-                if key in user_data:
-                    set_clauses.append(f"{db_field} = %s")
-                    values.append(user_data[key])
-            
-            if not set_clauses:
-                return False
-            
-            values.append(username)
-            
-            query = f"UPDATE users SET {', '.join(set_clauses)} WHERE username = %s"
-            cur.execute(query, values)
-            
-            rows_affected = cur.rowcount
-            conn.commit()
-            cur.close()
-            conn.close()
-            
-            return rows_affected > 0
-            
-        except Exception as e:
-            logger.info(f"Error updating user: {e}")
-            return False
-    
+  
     def verify_user_email(self, username: str) -> bool:
         """
         Mark a user's email as verified based on username.
