@@ -19,8 +19,11 @@ This project monitors Croatian real estate listings via RSS, crawls new listings
 ### Next Steps
 
 1. **User Newsletter API setup**
-    - API endpoints to create a newsletter request, delete it or edit it.
-    - This would require a login perhaps?
+    - API endpoints to create a profile, update it or delete it
+    - API endpoints to create a goal, update it or remove it
+    - API endpoints to list goal criteria matched properties
+    - New DB table which corresponds goal id with property id-s that are satisfactory for the query.
+    - Login, logout, jwt
 
 2. **Front end setup and user stories**
     - Login or registration on opening the web-site. Gmail enabled

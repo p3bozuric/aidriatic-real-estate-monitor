@@ -1,4 +1,4 @@
-from crawl_job.job import JobRunner
+from app.crawl_job.job import JobRunner
 
 def main():
     job = JobRunner()

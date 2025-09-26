@@ -6,7 +6,7 @@ import random
 from loguru import logger
 from rss_parser.rss_parsing import parse_rss_feed
 from crawl_job.crawler import process_real_estate_listing
-from database.setup import setup_database
+from app.database.setup import setup_database
 
 class JobRunner:
     def __init__(self):

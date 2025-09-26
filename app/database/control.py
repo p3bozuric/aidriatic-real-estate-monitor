@@ -629,22 +629,22 @@ class DatabaseControl:
             return {}
     
     def get_properties_by_ids(self, id_values: List[Union[str, int]]) -> Dict[str, Dict[str, Any]]:
-        """ 
+        """
         Extract all values from properties table for a list of IDs or ID_ints.
-        
+
         Args:
             id_values: List of either string IDs or integer ID_ints
-            
+
         Returns:
             Dict[str, Dict[str, Any]]: Dictionary with ID as key and property data as value
         """
         try:
             conn = self._get_connection()
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            
+
             if not id_values:
                 return {}
-            
+
             # Determine which field to search by based on first element
             if isinstance(id_values[0], int):
                 placeholders = ', '.join(['%s'] * len(id_values))
@@ -654,22 +654,100 @@ class DatabaseControl:
                 placeholders = ', '.join(['%s'] * len(id_values))
                 query = f"SELECT * FROM properties WHERE id IN ({placeholders})"
                 key_field = 'id'
-            
+
             cur.execute(query, id_values)
             results = cur.fetchall()
-            
+
             # Build result dictionary
             result_dict = {}
             for row in results:
                 row_dict = dict(row)
                 result_dict[str(row_dict[key_field])] = row_dict
-            
+
             cur.close()
             conn.close()
-            
+
             return result_dict
-            
+
         except Exception as e:
             logger.info(f"Error getting properties by IDs: {e}")
             return {}
+
+    def get_user_by_username(self, username: str) -> Dict[str, Any]:
+        """
+        Get user by username.
+
+        Args:
+            username: User's username
+
+        Returns:
+            Dict[str, Any]: User data or empty dict if not found
+        """
+        try:
+            conn = self._get_connection()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+
+            query = "SELECT * FROM users WHERE username = %s"
+            cur.execute(query, (username,))
+            result = cur.fetchone()
+
+            cur.close()
+            conn.close()
+
+            return dict(result) if result else {}
+
+        except Exception as e:
+            logger.info(f"Error getting user by username: {e}")
+            return {}
+
+    def add_user_goal_criteria_met(self, user_goal_id: int, property_ids: List[int]) -> bool:
+        """
+        Add property IDs to user_goal_criteria_met table.
+        Appends to existing entry if exists, otherwise creates new entry.
+
+        Args:
+            user_goal_id: ID of the user goal
+            property_ids: List of property IDs to add
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            import json
+            conn = self._get_connection()
+            cur = conn.cursor()
+
+            # Check if entry exists for this user_goal_id
+            cur.execute("SELECT property_ids FROM user_goal_criteria_met WHERE user_goal_id = %s", (user_goal_id,))
+            result = cur.fetchone()
+
+            if result:
+                # Entry exists, append to existing property_ids
+                existing_ids = result[0] or []
+                # Combine and remove duplicates
+                combined_ids = list(set(existing_ids + property_ids))
+
+                query = """
+                UPDATE user_goal_criteria_met
+                SET property_ids = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE user_goal_id = %s
+                """
+                cur.execute(query, (json.dumps(combined_ids), user_goal_id))
+            else:
+                # Entry doesn't exist, create new one
+                query = """
+                INSERT INTO user_goal_criteria_met (user_goal_id, property_ids)
+                VALUES (%s, %s)
+                """
+                cur.execute(query, (user_goal_id, json.dumps(property_ids)))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            return True
+
+        except Exception as e:
+            logger.info(f"Error adding user goal criteria met: {e}")
+            return False
 

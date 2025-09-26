@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Dict, Optional, Any
 from crawl4ai import *
 from loguru import logger
-from database.control import DatabaseControl
+from app.database.control import DatabaseControl
 
 def clean_and_extract_real_estate_info(markdown_content: str, id: str) -> Dict[str, Any]:
     """

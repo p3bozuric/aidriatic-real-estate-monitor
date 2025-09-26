@@ -1,7 +1,7 @@
 from loguru import logger
-from database.control import DatabaseControl
-from filtering.filter import hard_filter, soft_filter, presentation
-from emailing.email import send_email
+from app.database.control import DatabaseControl
+from app.filtering.filter import hard_filter, soft_filter, presentation
+from app.emailing.email import send_email
 import json
 import os
 

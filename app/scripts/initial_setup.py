@@ -1,5 +1,5 @@
-from crawl_job.job import JobRunner
-from database.setup import setup_database
+from app.crawl_job.job import JobRunner
+from app.database.setup import setup_database
 
 def main():
     setup_database()

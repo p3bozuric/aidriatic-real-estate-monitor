@@ -93,6 +93,20 @@ def setup_database():
         CREATE INDEX IF NOT EXISTS idx_user_goals_user_id ON user_goals(user_id);
         """
 
+        create_user_goal_criteria_met_table = """
+        CREATE TABLE IF NOT EXISTS user_goal_criteria_met (
+            id SERIAL PRIMARY KEY,
+            user_goal_id INTEGER NOT NULL,
+            property_ids JSONB DEFAULT '[]'::jsonb,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_goal_id) REFERENCES user_goals(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_user_goal_criteria_met_user_goal_id ON user_goal_criteria_met(user_goal_id);
+        CREATE INDEX IF NOT EXISTS idx_user_goal_criteria_met_property_ids ON user_goal_criteria_met USING GIN(property_ids);
+        """
+
         cur.execute(create_properties_table)
         logger.info("Properties table exists or has been created.")
 
@@ -101,13 +115,16 @@ def setup_database():
 
         cur.execute(create_user_goals_table)
         logger.info("User goals table exists or has been created.")
+
+        cur.execute(create_user_goal_criteria_met_table)
+        logger.info("User goal criteria met table exists or has been created.")
         
         conn.commit()
         cur.close()
         conn.close()
         
         logger.info("Database setup completed successfully!")
-        logger.info("Created tables: properties, users")
+        logger.info("Created tables: properties, users, user_goals, user_goal_criteria_met")
         
     except Exception as e:
         logger.info(f"Error setting up database: {e}")
