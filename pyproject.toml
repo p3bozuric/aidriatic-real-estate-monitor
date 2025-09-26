@@ -22,12 +22,13 @@ dependencies = [
     "playwright>=1.55.0",
     "psycopg2>=2.9.10",
     "psycopg2-binary>=2.9.10",
+    "uvicorn>=0.37.0",
 ]
 
 [project.scripts]
-initial_setup = "scripts.initial_setup:main"
-daily_crawl = "scripts.daily_script:main"
-send_email = "scripts.send_email:main"
+initial_setup = "app.scripts.initial_setup:main"
+daily_crawl = "app.scripts.daily_script:main"
+send_email = "app.scripts.send_email:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["crawl_job", "database", "emailing", "filtering", "scripts"]

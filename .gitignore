@@ -8,3 +8,6 @@ __pycache__/
 data/
 logs/
 job_data/
+
+setup.bat
+setup.sh
